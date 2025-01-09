@@ -1,0 +1,49 @@
+# update.yml
+---
+- name: Upadte vm hosts
+  gather_facts: no
+  hosts: vm
+  tasks:
+    - name: Push update.sh
+      copy:
+        src: "./scripts/update.sh"
+        dest: "/tmp/update.sh"
+
+    - name: Chmod update.sh
+      shell: chmod +x /tmp/update.sh
+
+    - name: Exec update.sh
+      shell: /tmp/update.sh
+
+    - name: Clean
+      shell: rm -rf /tmp/update.sh
+
+- name: Run script on LXC hosts
+  gather_facts: no
+  hosts: lxc
+  connection: local
+  tasks:
+    - name: Push update.sh
+      pct:
+        cmd: "push"
+        host: "{{ inventory_hostname }}"
+        src: "./scripts/update.sh"
+        dest: "/tmp/update.sh"
+
+    - name: Chmod update.sh
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "chmod +x /tmp/update.sh"
+
+    - name: Exec update.sh
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "/tmp/update.sh"
+
+    - name: Clean
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "rm -rf /tmp/update.sh"
