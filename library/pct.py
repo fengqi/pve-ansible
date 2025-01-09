@@ -54,10 +54,16 @@ def push(module, vmid):
     src = module.params['src']
     dest = module.params['dest']
 
+
     if not os.path.isfile(src):
         module.fail_json(msg=f"Source file {src} does not exist.")
 
     cmd = f"pct push {vmid} {src} {dest}"
+
+    extraArgs = module.params['extra_args']
+    if extraArgs:
+        cmd += f" {extraArgs}"
+
     result = run_command(module, cmd)
     module.exit_json(changed=True, msg=f"File {src} successfully pushed to {vmid}:{dest}.", output=result)
 

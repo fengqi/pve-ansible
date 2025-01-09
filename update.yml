@@ -12,9 +12,7 @@
       copy:
         src: "./scripts/update.sh"
         dest: "{{ temp_dir.stdout }}/update.sh"
-
-    - name: Chmod update.sh
-      shell: chmod +x "{{ temp_dir.stdout }}/update.sh"
+        mode: '0755'
 
     - name: Exec update.sh
       shell: "{{ temp_dir.stdout }}/update.sh"
@@ -40,12 +38,7 @@
         host: "{{ inventory_hostname }}"
         src: "./scripts/update.sh"
         dest: "{{ temp_dir.output }}/update.sh"
-
-    - name: Chmod update.sh
-      pct:
-        cmd: "exec"
-        host: "{{ inventory_hostname }}"
-        extra_args: "chmod +x {{ temp_dir.output }}/update.sh"
+        extra_args: "--perms 0755"
 
     - name: Exec update.sh
       pct:
