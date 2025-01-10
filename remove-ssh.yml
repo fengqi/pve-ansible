@@ -1,0 +1,31 @@
+- name: Remove lxc hosts ssh package
+  gather_facts: no
+  hosts: lxc
+  connection: local
+  tasks:
+    - name: Create a temporary directory on LXC
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "mktemp -d"
+      register: temp_dir
+
+    - name: Push remove-ssh.sh
+      pct:
+        cmd: "push"
+        host: "{{ inventory_hostname }}"
+        src: "./scripts/remove-ssh.sh"
+        dest: "{{ temp_dir.output }}/remove-ssh.sh"
+        extra_args: "--perms 0755"
+
+    - name: Exec remove-ssh.sh
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "{{ temp_dir.output }}/remove-ssh.sh"
+
+    - name: Clean
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "rm -rf {{ temp_dir.output }}"
