@@ -1,0 +1,21 @@
+- name: Start VM hosts
+  gather_facts: no
+  hosts: vm
+  connection: local
+  tasks:
+    - name: Start vm
+      qm:
+        cmd: "start"
+        host: "{{ inventory_hostname }}"
+        extra_args: ""
+
+- name: Start LXC hosts
+  gather_facts: no
+  hosts: lxc
+  connection: local
+  tasks:
+    - name: Start lxc
+      pct:
+        cmd: "start"
+        host: "{{ inventory_hostname }}"
+        extra_args: ""

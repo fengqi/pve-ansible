@@ -80,6 +80,24 @@ def exec(module, vmid):
     result = run_command(module, cmd)
     module.exit_json(changed=True, msg=f"Command {cmd} executed successfully.", output=result)
 
+def start(module, vmid):
+    cmd = f"pct start {vmid}"
+    extraArgs = module.params['extra_args']
+    if extraArgs:
+        cmd += f" {extraArgs}"
+
+    result = run_command(module, cmd)
+    module.exit_json(changed=True, msg=f"Command {cmd} executed successfully.", output=result)
+
+def shutdown(module, vmid):
+    cmd = f"pct shutdown {vmid}"
+    extraArgs = module.params['extra_args']
+    if extraArgs:
+        cmd += f" {extraArgs}"
+
+    result = run_command(module, cmd)
+    module.exit_json(changed=True, msg=f"Command {cmd} executed successfully.", output=result)
+
 def main():
     module_args = dict(
         cmd=dict(type='str', required=True),
@@ -107,6 +125,10 @@ def main():
             push(module, vmid)
         case "exec":
             exec(module, vmid)
+        case "start":
+            start(module, vmid)
+        case "shutdown":
+            shutdown(module, vmid)
         case _:
             module.fail_json(msg=f"Unknown command: {cmd}")
 

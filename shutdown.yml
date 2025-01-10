@@ -1,0 +1,17 @@
+- name: Shutdown VM hosts
+  gather_facts: no
+  hosts: vm
+  tasks:
+    - name: Shutdown vm
+      community.general.shutdown:
+
+- name: Shutdown LXC hosts
+  gather_facts: no
+  hosts: lxc
+  connection: local
+  tasks:
+    - name: Shutdown lxc
+      pct:
+        cmd: "shutdown"
+        host: "{{ inventory_hostname }}"
+        extra_args: ""
