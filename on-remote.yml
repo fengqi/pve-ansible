@@ -1,0 +1,40 @@
+- name: Exec script on LXC hosts
+  gather_facts: no
+  hosts: lxc
+  connection: local
+  vars:
+    shell_path: "./scripts"
+    shell_file: "alpine_upgrade.sh"
+  ignore_errors: yes
+  tasks:
+    - name: Create a temporary directory on LXC
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "mktemp -d"
+      register: temp_dir
+
+    - name: Push script
+      pct:
+        cmd: "push"
+        host: "{{ inventory_hostname }}"
+        src: "{{ shell_path }}/{{ shell_file }}"
+        dest: "{{ temp_dir.output }}/{{ shell_file }}"
+        extra_args: "--perms 0755"
+
+    - name: Exec script
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "{{ temp_dir.output }}/{{ shell_file }}"
+      register: result
+
+    - name: Clean
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "rm -rf {{ temp_dir.output }}"
+
+    - name: Check result
+      debug:
+        var: result.output
