@@ -23,7 +23,7 @@ version=$(echo $version | cut -d "." -f 1,2)
 #     ["3.20"]="3.21"
 # )
 # 在这里定义什么A升级到B版本
-upgradeMap="3.16:3.17 3.19:3.20"
+upgradeMap="3.16:3.17 3.17:3.18 3.18:3.19"
 get_value() {
     key="$1"
     for pair in $upgradeMap; do
