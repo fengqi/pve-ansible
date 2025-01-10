@@ -37,4 +37,4 @@
 
     - name: Check result
       debug:
-        var: result.output
+        msg: "{{ result.output.split('\n') }}"
