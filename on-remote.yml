@@ -1,10 +1,39 @@
+- name: Run script on VM hosts
+  gather_facts: no
+  hosts: vm
+  vars:
+    shell_path: "./scripts"
+    shell_file: "update.sh"
+  ignore_errors: yes
+  tasks:
+    - name: Create a temporary directory
+      shell: mktemp -d
+      register: temp_dir
+
+    - name: Push script
+      copy:
+        src: "{{ shell_path }}/{{ shell_file }}"
+        dest: "{{ temp_dir.stdout }}/{{ shell_file }}"
+        mode: '0755'
+
+    - name: Exec script
+      shell: "{{ temp_dir.stdout }}/{{ shell_file }}"
+      register: result
+
+    - name: Clean
+      shell: rm -rf "{{ temp_dir.stdout }}"
+
+    - name: Check result
+      debug:
+        msg: "{{ result.stdout.split('\n') }}"
+
 - name: Exec script on LXC hosts
   gather_facts: no
   hosts: lxc
   connection: local
   vars:
     shell_path: "./scripts"
-    shell_file: "alpine_upgrade.sh"
+    shell_file: "update.sh"
   ignore_errors: yes
   tasks:
     - name: Create a temporary directory on LXC
