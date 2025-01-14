@@ -43,7 +43,7 @@ def get_shell(module, vmid):
     return shell
 
 def file_exists(module, vmid, file_path):
-    cmd = f"pct exec {vmid} -- test -f {file_path}"
+    cmd = f"pct exec {vmid} -- test -f '{file_path}'"
     try:
         subprocess.check_call(cmd, shell=True)
         return True
