@@ -16,7 +16,7 @@ def run_command(module, cmd):
         )
         return result.stdout.strip()
     except subprocess.CalledProcessError as e:
-        module.fail_json(msg=f"Command failed: {e.stderr.strip()}", cmd=cmd)
+        module.fail_json(msg=f"Command failed: {e.stderr.strip()}", output=f"Running command: {cmd} failed")
 
 def get_vmid(module, name):
     cmd = "pct list"
@@ -31,7 +31,7 @@ def get_vmid(module, name):
     if name in id_name_map:
         return id_name_map[name]
     else:
-        module.fail_json(msg=f"Command failed: {e.stderr.strip()}", cmd=cmd)
+        module.fail_json(msg=f"VM not found: {name}", output=f"VM {name} not found. Run 'pct list' to see available VMs.")
 
 def get_shell(module, vmid):
     cmd = f"pct exec {vmid} -- getent passwd root"

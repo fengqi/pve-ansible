@@ -1,0 +1,104 @@
+- name: Deply memos on LXC
+  gather_facts: no
+  hosts: memos
+  connection: local
+  ignore_errors: no
+  vars:
+    memos_version: "v0.23.0"
+  tasks:
+    - name: Read current version
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "cat /opt/memos/version"
+      register: result
+
+    - name: Check current version
+      meta: end_play
+      when: result.output == memos_version
+
+    - name: Use USTC mirrors
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "sed -i 's/dl-cdn.alpinelinux.org/mirrors.ustc.edu.cn/g' /etc/apk/repositories"
+
+    - name: Install wget
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "apk update && apk add wget"
+
+    - name: Create run directory
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "mkdir -p /opt/memos"
+
+    - name: Download memos to tmp
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "wget https://github.com/usememos/memos/releases/download/{{ memos_version }}/memos_{{ memos_version }}_linux_amd64.tar.gz -O /tmp/memos.tar.gz"
+
+    - name: Create tmp directory
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "mkdir -p /tmp/memos"
+
+    - name: Extract memos to tmp
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "tar -xzf /tmp/memos.tar.gz -C /tmp/memos"
+
+    - name: Backup old
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "mv -f /opt/memos/memos /opt/memos/memos.old"
+
+    - name: Move news
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "mv /tmp/memos/memos /opt/memos"
+
+    - name: Create init.d
+      pct:
+        cmd: "push"
+        host: "{{ inventory_hostname }}"
+        src: "./apps/memos/init.d.sh"
+        dest: "/etc/init.d/memos"
+        extra_args: "--perms 0755"
+
+    - name: Create Update Daemon
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "rc-update add memos"
+
+    - name: Restart memos
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "/etc/init.d/memos restart"
+
+    - name: Write current version
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "echo {{ memos_version }} > /opt/memos/version"
+
+    - name: Clean file
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "rm -rf /tmp/memos.tar.gz"
+
+    - name: Clean dir
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "rm -rf /tmp/memos"
