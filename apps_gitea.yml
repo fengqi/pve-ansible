@@ -1,0 +1,128 @@
+- name: Deploy gitea on Alpine LXC
+  gather_facts: no
+  hosts: git
+  connection: local
+  ignore_errors: no
+  vars:
+    gitea_version: "1.23.1"
+  tasks:
+    - name: Read current version
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "if [ -f /home/git/version ]; then cat /home/git/version; fi"
+      register: result
+
+    - name: Check current version
+      meta: end_play
+      when: result.output == gitea_version
+
+    - name: Use USTC mirrors
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "sed -i 's/dl-cdn.alpinelinux.org/mirrors.ustc.edu.cn/g' /etc/apk/repositories"
+
+    - name: Install wget libcap git
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "apk update && apk add wget git libcap"
+
+    - name: Check git user
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "id git; if [ $? -eq 0 ]; then echo 1; else echo 0; fi"
+      register: user_exists
+
+    - name: Add git user
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "addgroup -S git && adduser -S git -G git"
+      when: user_exists.output == "0"
+
+    - name: Create required directory structure
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "mkdir -p /home/git/custom/public; mkdir -p /home/git/custom/conf; mkdir -p /home/git/data; mkdir -p /home/git/logs"
+
+    - name: Chown directory
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "chown -R git:git /home/git"
+
+    - name: Backup old
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "if [ -f /home/git/gitea ]; then mv -f /home/git/gitea /home/git/gitea.old; fi"
+
+    - name: Download gitea
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "wget https://dl.gitea.com/gitea/{{ gitea_version }}/gitea-{{ gitea_version }}-linux-amd64 -O /home/git/gitea"
+
+    - name: "Config robot"
+      pct:
+        cmd: "push"
+        host: "{{ inventory_hostname }}"
+        src: "./apps/gitea/robots.txt"
+        dest: "/home/git/custom/public/robots.txt"
+        extra_args: "--perms 0644"
+
+    - name: Config gitea
+      pct:
+        cmd: "push"
+        host: "{{ inventory_hostname }}"
+        src: "./apps/gitea/app.ini"
+        dest: "/home/git/custom/conf/app.ini"
+        extra_args: "--perms 0644"
+
+    - name: Chown gitea
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "chown -R git:git /home/git/gitea"
+
+    - name: Chmod gitea
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "chmod +x /home/git/gitea"
+
+    - name: Allow listen 80
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "setcap CAP_NET_BIND_SERVICE=+eip /home/git/gitea"
+
+    - name: Create init.d
+      pct:
+        cmd: "push"
+        host: "{{ inventory_hostname }}"
+        src: "./apps/gitea/init.d.sh"
+        dest: "/etc/init.d/gitea"
+        extra_args: "--perms 0755"
+
+    - name: Create Update Daemon
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "rc-update add gitea"
+
+    - name: Restart gitea
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "/etc/init.d/gitea restart"
+
+    - name: Write current version
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "echo {{ gitea_version }} > /home/git/version"
