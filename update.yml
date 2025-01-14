@@ -16,9 +16,14 @@
 
     - name: Exec update.sh
       shell: "{{ temp_dir.stdout }}/update.sh"
+      register: result
 
     - name: Clean
       shell: rm -rf "{{ temp_dir.stdout }}"
+
+    - name: Check result
+      debug:
+        msg: "{{ result.stdout.split('\n') }}"
 
 - name: Run script on LXC hosts
   gather_facts: no
@@ -45,9 +50,14 @@
         cmd: "exec"
         host: "{{ inventory_hostname }}"
         extra_args: "{{ temp_dir.output }}/update.sh"
+      register: result
 
     - name: Clean
       pct:
         cmd: "exec"
         host: "{{ inventory_hostname }}"
         extra_args: "rm -rf {{ temp_dir.output }}"
+
+    - name: Check result
+      debug:
+        msg: "{{ result.output.split('\n') }}"
