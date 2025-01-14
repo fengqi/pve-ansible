@@ -10,7 +10,7 @@
       pct:
         cmd: "exec"
         host: "{{ inventory_hostname }}"
-        extra_args: "cat /opt/memos/version"
+        extra_args: "if [ -f /opt/memos/version ]; then cat /opt/memos/version; fi"
       register: result
 
     - name: Check current version
@@ -57,7 +57,7 @@
       pct:
         cmd: "exec"
         host: "{{ inventory_hostname }}"
-        extra_args: "mv -f /opt/memos/memos /opt/memos/memos.old"
+        extra_args: "if [ -f /opt/memos/memos ]; then mv -f /opt/memos/memos /opt/memos/memos.old; fi"
 
     - name: Move news
       pct:
@@ -91,14 +91,8 @@
         host: "{{ inventory_hostname }}"
         extra_args: "echo {{ memos_version }} > /opt/memos/version"
 
-    - name: Clean file
+    - name: Clean
       pct:
         cmd: "exec"
         host: "{{ inventory_hostname }}"
-        extra_args: "rm -rf /tmp/memos.tar.gz"
-
-    - name: Clean dir
-      pct:
-        cmd: "exec"
-        host: "{{ inventory_hostname }}"
-        extra_args: "rm -rf /tmp/memos"
+        extra_args: "rm -rf /tmp/memos.tar.gz; rm -rf /tmp/memos"
