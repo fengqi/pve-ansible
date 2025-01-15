@@ -1,0 +1,30 @@
+server:
+  port: 80
+  servlet.context-path: /
+
+# Only keep lines that are relevant to you!
+# Lines starting with # are comments
+# Make sure indentation is correct (2 spaces at every indentation level), yaml is very sensitive!
+komga:
+  config-dir: /opt/komga
+
+  libraries-scan-cron: "0 0 */8 * * ?"  # periodic scan every 8 hours, set "-" to disable periodic scan
+  libraries-scan-startup: false         # scan libraries at startup
+  libraries-scan-directory-exclusions:  # patterns to exclude directories from the scan
+    - "#recycle" # synology NAS recycle bin
+    - "@eaDir"   # synology NAS index/metadata folders
+    - "@Recycle" # QNAP NAS recycle bin
+
+  remember-me:
+    key: __TODO__     # required to activate the remember-me auto-login via cookies
+    validity: 30d     # validity of the cookie in seconds, here 30 days
+  session-timeout: 7d # session timeout, here 7 days
+
+  cors.allowed-origins:
+    - http://localhost
+
+  delete-empty-collections: false
+  delete-empty-read-lists: false
+
+  database:
+    file: ${komga.config-dir}/database.sqlite

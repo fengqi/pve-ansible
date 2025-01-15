@@ -1,0 +1,83 @@
+- name: Deploy komga on Alpine LXC
+  gather_facts: no
+  hosts: komga
+  connection: local
+  ignore_errors: no
+  vars:
+    komga_version: "1.18.0"
+  tasks:
+    - name: Read current version
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "if [ -f /opt/komga/version ]; then cat /opt/komga/version; fi"
+      register: result
+
+    - name: Check current version
+      meta: end_play
+      when: result.output == komga_version
+
+    - name: Use USTC mirrors
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "sed -i 's/dl-cdn.alpinelinux.org/mirrors.ustc.edu.cn/g' /etc/apk/repositories"
+
+    - name: Install wget jdk
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "apk update && apk add wget openjdk21"
+
+    - name: Create run directory
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "mkdir -p /opt/komga"
+
+    - name: Backup old
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "if [ -f /opt/komga/komga.jar ]; then mv -f /opt/komga/komga.jar /opt/komga/komga.jar.old; fi"
+
+    - name: Download komga
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "wget https://github.com/gotson/komga/releases/download/{{ komga_version }}/komga-{{ komga_version }}.jar -O /opt/komga/komga.jar"
+
+    - name: Config file
+      pct:
+        cmd: "push"
+        host: "{{ inventory_hostname }}"
+        src: "./apps/komga/application.yml"
+        dest: "/opt/komga/application.yml"
+        extra_args: "--perms 0644"
+
+    - name: Create init.d
+      pct:
+        cmd: "push"
+        host: "{{ inventory_hostname }}"
+        src: "./apps/komga/init.d.sh"
+        dest: "/etc/init.d/komga"
+        extra_args: "--perms 0755"
+
+    - name: Create Update Daemon
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "rc-update add komga"
+
+    - name: Restart komga
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "/etc/init.d/komga restart"
+
+    - name: Write current version
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "echo {{ komga_version }} > /opt/komga/version"
+
