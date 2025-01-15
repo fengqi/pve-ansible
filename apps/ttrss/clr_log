@@ -1,0 +1,5 @@
+#!/bin/sh
+
+> /var/logs/ttrss_update_daemon2.log
+> /var/logs/nginx/access.log
+> /var/logs/nginx/error.log

@@ -1,0 +1,100 @@
+- name: Deply ttrss
+  gather_facts: no
+  hosts: testrss
+  connection: local
+  ignore_errors: yes
+  tasks:
+    - name: Use USTC mirrors
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "sed -i 's/dl-cdn.alpinelinux.org/mirrors.ustc.edu.cn/g' /etc/apk/repositories"
+
+    - name: Install git php nginx
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "apk update"
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "apk add git"
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "apk add nginx"
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "apk add php83 php83-common php83-ctype php83-curl php83-dom php83-exif
+          php83-fileinfo php83-fpm php83-gd php83-iconv php83-intl php83-mbstring
+          php83-mysqlnd php83-opcache php83-openssl php83-pcntl php83-pdo php83-pdo_mysql
+          php83-pecl-apcu php83-phar php83-posix php83-session php83-simplexml
+          php83-sockets php83-tokenizer php83-xml php83-xmlwriter php83-xsl php83-zip"
+
+    - name: Directory exists
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "test -d /var/www/ttrss"
+      register: directory_exists
+
+    - name: Create directory
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "mkdir -p /var/www/ttrss"
+      when: not directory_exists.output == ""
+
+    - name: Deploy ttrss
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "git clone https://gitlab.tt-rss.org/tt-rss/tt-rss.git /var/www/ttrss"
+      when: not directory_exists.output == ""
+
+    - name: Update ttrss
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "git -C /var/www/ttrss pull"
+      when: directory_exists.output == ""
+
+    - name: Create config.php
+      pct:
+        cmd: "push"
+        host: "{{ inventory_hostname }}"
+        src: "./apps/ttrss/config.php"
+        dest: "/var/www/ttrss/config.php"
+        extra_args: "--perms 0644"
+
+    - name: Chown ttrss
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "chown -R nobody:nobody /var/www/ttrss"
+
+    - name: Create Update Daemon
+      pct:
+        cmd: "push"
+        host: "{{ inventory_hostname }}"
+        src: "./apps/ttrss/init.d.sh"
+        dest: "/etc/init.d/ttrss"
+        extra_args: "--perms 0755"
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "rc-update add ttrss"
+
+    - name: Config Nginx
+      pct:
+        cmd: "push"
+        host: "{{ inventory_hostname }}"
+        src: "./apps/ttrss/nginx.conf"
+        dest: "/etc/nginx/http.d/ttrss.conf"
+
+    - name: Restart Service
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "rc-service nginx restart"
