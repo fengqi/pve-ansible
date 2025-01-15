@@ -1,0 +1,74 @@
+- name: Deploy bark on Alpine LXC
+  gather_facts: no
+  hosts: bark
+  connection: local
+  ignore_errors: no
+  vars:
+    bark_version: "v2.2.0"
+  tasks:
+    - name: Read current version
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "if [ -f /opt/bark/version ]; then cat /opt/bark/version; fi"
+      register: result
+
+    - name: Check current version
+      meta: end_play
+      when: result.output == bark_version
+
+    - name: Use USTC mirrors
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "sed -i 's/dl-cdn.alpinelinux.org/mirrors.ustc.edu.cn/g' /etc/apk/repositories"
+
+    - name: Install wget libcap
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "apk update && apk add wget libcap"
+
+    - name: Create run directory
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "mkdir -p /opt/bark"
+
+    - name: Backup old
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "if [ -f /opt/bark/bark ]; then mv -f /opt/bark/bark /opt/bark/bark.old; fi"
+
+    - name: Download bark
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "wget https://github.com/Finb/bark-server/releases/download/{{ bark_version }}/bark-server_linux_amd64 -O /opt/bark/bark"
+
+    - name: Create init.d
+      pct:
+        cmd: "push"
+        host: "{{ inventory_hostname }}"
+        src: "./apps/bark/init.d.sh"
+        dest: "/etc/init.d/bark"
+        extra_args: "--perms 0755"
+
+    - name: Create Update Daemon
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "rc-update add bark"
+
+    - name: Restart bark
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "/etc/init.d/bark restart"
+
+    - name: Write current version
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "echo {{ bark_version }} > /opt/bark/version"
