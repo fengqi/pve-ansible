@@ -4,60 +4,179 @@
   gather_facts: no
   hosts: vm
   tasks:
-    - name: Create a temporary directory
-      shell: mktemp -d
-      register: temp_dir
+    - name: Get os type
+      shell: cat /etc/os-release | grep '^ID=' | awk -F '=' '{print $2}'
+      register: os_type
 
-    - name: Push update.sh
-      copy:
-        src: "./scripts/update.sh"
-        dest: "{{ temp_dir.stdout }}/update.sh"
-        mode: '0755'
+    - name: Apt update
+      shell: apt-get update
+      when: os_type.stdout == 'ubuntu' or os_type.stdout == 'debian'
+      register: apt_update
 
-    - name: Exec update.sh
-      shell: "{{ temp_dir.stdout }}/update.sh"
-      register: result
+    - name: Yum update
+      shell: yum update
+      when: os_type.stdout == 'centos' or os_type.stdout == 'fedora'
+      register: yum_update
 
-    - name: Clean
-      shell: rm -rf "{{ temp_dir.stdout }}"
+    - name: Apk update
+      shell: apk update
+      when: os_type.stdout == 'alpine'
+      register: apk_update
 
-    - name: Check result
+    - name: Apt Upgrade
+      shell: apt-get dist-upgrade -y
+      when: os_type.stdout == 'ubuntu' or os_type.stdout == 'debian'
+      register: apt_upgrade
+
+    - name: Yum Upgrade
+      shell: yum upgrade -y
+      when: os_type.stdout == 'centos' or os_type.stdout == 'fedora'
+      register: yum_upgrade
+
+    - name: Apk Upgrade
+      shell: apk upgrade
+      when: os_type.stdout == 'alpine'
+      register: apk_upgrade
+
+    - name: Apt Clean
+      shell: apt-get autoremove -y && apt-get clean
+      when: os_type.stdout == 'ubuntu' or os_type.stdout == 'debian'
+      register: apt_clean
+
+    - name: Yum Clean
+      shell: yum clean all
+      when: os_type.stdout == 'centos' or os_type.stdout == 'fedora'
+      register: yum_clean
+
+    - name: Apk Clean
+      shell: apk cache clean
+      when: os_type.stdout == 'alpine'
+
+    - name: Apt result
+      when: os_type.stdout == 'ubuntu' or os_type.stdout == 'debian'
       debug:
-        msg: "{{ result.stdout.split('\n') }}"
+        msg:
+          update: "{{ apt_update.stdout.split('\n') }}"
+          upgrade: "{{ apt_upgrade.stdout.split('\n') }}"
+          clean: "{{ apt_clean.stdout.split('\n') }}"
+
+    - name: Yum result
+      when: os_type.stdout == 'centos' or os_type.stdout == 'fedora'
+      debug:
+        msg:
+          update: "{{ yum_update.stdout.split('\n') }}"
+          upgrade: "{{ yum_upgrade.stdout.split('\n') }}"
+          clean: "{{ yum_clean.stdout.split('\n') }}"
+
+    - name: Apk result
+      when: os_type.stdout == 'alpine'
+      debug:
+        msg:
+          update: "{{ apk_update.stdout.split('\n') }}"
+          upgrade: "{{ apk_upgrade.stdout.split('\n') }}"
 
 - name: Run script on LXC hosts
   gather_facts: no
   hosts: lxc
   connection: local
   tasks:
-    - name: Create a temporary directory on LXC
+    - name: Get os type
       pct:
         cmd: "exec"
         host: "{{ inventory_hostname }}"
-        extra_args: "mktemp -d"
-      register: temp_dir
+        extra_args: source /etc/os-release && echo $ID
+      register: os_type
 
-    - name: Push update.sh
-      pct:
-        cmd: "push"
-        host: "{{ inventory_hostname }}"
-        src: "./scripts/update.sh"
-        dest: "{{ temp_dir.output }}/update.sh"
-        extra_args: "--perms 0755"
-
-    - name: Exec update.sh
+    - name: Apt update
       pct:
         cmd: "exec"
         host: "{{ inventory_hostname }}"
-        extra_args: "{{ temp_dir.output }}/update.sh"
-      register: result
+        extra_args: "apt-get update"
+      when: os_type.output == 'ubuntu' or os_type.output == 'debian'
+      register: apt_update
 
-    - name: Clean
+    - name: Yum update
       pct:
         cmd: "exec"
         host: "{{ inventory_hostname }}"
-        extra_args: "rm -rf {{ temp_dir.output }}"
+        extra_args: "yum update"
+      when: os_type.output == 'centos' or os_type.output == 'fedora'
+      register: yum_update
 
-    - name: Check result
+    - name: Apk update
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "apk update"
+      when: os_type.output == 'alpine'
+      register: apk_update
+
+    - name: Apt Upgrade
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "apt-get dist-upgrade -y"
+      when: os_type.output == 'ubuntu' or os_type.output == 'debian'
+      register: apt_upgrade
+
+    - name: Yum Upgrade
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "yum upgrade -y"
+      when: os_type.output == 'centos' or os_type.output == 'fedora'
+      register: yum_upgrade
+
+    - name: Apk Upgrade
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "apk upgrade"
+      when: os_type.output == 'alpine'
+      register: apk_upgrade
+
+    - name: Apt Clean
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "apt-get autoremove -y && apt-get clean"
+      when: os_type.output == 'ubuntu' or os_type.output == 'debian'
+      register: apt_clean
+
+    - name: Yum Clean
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "yum clean all"
+      when: os_type.output == 'centos' or os_type.output == 'fedora'
+      register: yum_clean
+
+    - name: Apk Clean
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "apk cache clean"
+      when: os_type.output == 'alpine'
+
+    - name: Apt result
+      when: os_type.output == 'ubuntu' or os_type.output == 'debian'
       debug:
-        msg: "{{ result.output.split('\n') }}"
+        msg:
+          update: "{{ apt_update.output.split('\n') }}"
+          upgrade: "{{ apt_upgrade.output.split('\n') }}"
+          clean: "{{ apt_clean.output.split('\n') }}"
+
+    - name: Yum result
+      when: os_type.output == 'centos' or os_type.output == 'fedora'
+      debug:
+        msg:
+          update: "{{ yum_update.output.split('\n') }}"
+          upgrade: "{{ yum_upgrade.output.split('\n') }}"
+          clean: "{{ yum_clean.output.split('\n') }}"
+
+    - name: Apk result
+      when: os_type.output == 'alpine'
+      debug:
+        msg:
+          update: "{{ apk_update.output.split('\n') }}"
+          upgrade: "{{ apk_upgrade.output.split('\n') }}"

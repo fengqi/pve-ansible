@@ -18,7 +18,7 @@ case $distro in
         ;;
     ubuntu|debian)
         echo "更新 Debian/Ubuntu 系统"
-        apt-get update && apt-get upgrade -y
+        apt-get update && apt-get dist-upgrade -y
         apt-get autoremove -y && apt-get clean
         ;;
     arch)
