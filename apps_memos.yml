@@ -4,7 +4,7 @@
   connection: local
   ignore_errors: no
   vars:
-    memos_version: "v0.23.0"
+    memos_version: "v0.23.1"
   tasks:
     - name: Read current version
       pct:
