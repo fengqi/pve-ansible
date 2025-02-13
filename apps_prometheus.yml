@@ -1,0 +1,121 @@
+- name: Deploy prometheus on LXC
+  gather_facts: no
+  hosts: prometheus
+  connection: local
+  ignore_errors: no
+  vars:
+    prometheus_version: "2.53.3"
+  tasks:
+    - name: Check config file
+      stat:
+        path: "./apps/prometheus/prometheus.yml"
+      register: config_exists
+
+    - name: Please create config file
+      meta: end_play
+      when: config_exists.stat.exists == False
+
+    - name: Read current version
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "if [ -f /opt/prometheus/prometheus ]; then /opt/prometheus/prometheus --version | cut -d ' ' -f 3 | head -1; fi"
+      register: result
+
+    - name: Check current version
+      meta: end_play
+      when: result.output == prometheus_version
+
+    - name: Use USTC mirrors
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "sed -i 's/dl-cdn.alpinelinux.org/mirrors.ustc.edu.cn/g' /etc/apk/repositories"
+
+    - name: Install wget
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "apk update && apk add wget"
+
+    - name: Create run directory
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "mkdir -p /opt/prometheus"
+
+    - name: Download prometheus
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "wget https://github.com/prometheus/prometheus/releases/download/v{{ prometheus_version }}/prometheus-{{ prometheus_version }}.linux-amd64.tar.gz -O /tmp/prometheus.tar.gz"
+
+    - name: Create tmp directory
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "mkdir -p /tmp/prometheus"
+
+    - name: Extract to tmp
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "tar -xzf /tmp/prometheus.tar.gz -C /tmp/prometheus"
+
+    - name: Backup old prometheus
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "if [ -f /opt/prometheus/prometheus ]; then mv -f /opt/prometheus/prometheus /opt/prometheus/prometheus.old; fi"
+
+    - name: Backup old promtool
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "if [ -f /opt/prometheus/promtool ]; then mv -f /opt/prometheus/promtool /opt/prometheus/promtool.old; fi"
+
+    - name: Move new prometheus
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "mv /tmp/prometheus/prometheus-{{ prometheus_version }}.linux-amd64/prometheus /opt/prometheus"
+
+    - name: Move new promtool
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "mv /tmp/prometheus/prometheus-{{ prometheus_version }}.linux-amd64/promtool /opt/prometheus"
+
+    - name: Config file
+      pct:
+        cmd: "push"
+        host: "{{ inventory_hostname }}"
+        src: "./apps/prometheus/prometheus.yml"
+        dest: "/opt/prometheus/prometheus.yml"
+        extra_args: "--perms 0644"
+
+    - name: Create init.d
+      pct:
+        cmd: "push"
+        host: "{{ inventory_hostname }}"
+        src: "./apps/prometheus/init.d.sh"
+        dest: "/etc/init.d/prometheus"
+        extra_args: "--perms 0755"
+
+    - name: Create Update Daemon
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "rc-update add prometheus"
+
+    - name: Restart prometheus
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "/etc/init.d/prometheus restart"
+
+    - name: Clean up
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "rm -rf /tmp/prometheus; rm -f /tmp/prometheus.tar.gz"
