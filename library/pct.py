@@ -1,6 +1,7 @@
 #!/usr/bin/python
 
 import os
+import shlex
 import subprocess
 from ansible.module_utils.basic import AnsibleModule
 
@@ -74,7 +75,7 @@ def exec(module, vmid):
     if file_exists(module, vmid, extraArgs):
         extraArgs = f"-- {shell} {extraArgs}"
     else:
-        extraArgs = f"-- {shell} -c '{extraArgs}'"
+        extraArgs = f"-- {shell} -c {shlex.quote(extraArgs)}"
 
     cmd = f"pct exec {vmid} {extraArgs}"
     result = run_command(module, cmd)
