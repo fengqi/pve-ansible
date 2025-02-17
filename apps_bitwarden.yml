@@ -1,0 +1,173 @@
+- name: Deploy bitwarden(vaultwarden_rs) web builds on LXC
+  gather_facts: no
+  hosts: bitwarden
+  connection: local
+  ignore_errors: no
+  vars:
+    web_builds: "v2025.1.1"
+  tasks:
+    - name: Read current web builds version
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "if [ -f /opt/bitwarden/web_version ]; then cat /opt/bitwarden/web_version; fi"
+      register: web_version
+
+    - name: Check current web builds version
+      meta: end_play
+      when: web_version.output == web_builds
+
+    - name: Use USTC mirrors
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "sed -i 's/dl-cdn.alpinelinux.org/mirrors.ustc.edu.cn/g' /etc/apk/repositories"
+
+    - name: Install wget
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "apk update && apk add wget"
+
+    - name: Create run directory
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "mkdir -p /opt/bitwarden"
+
+    - name: Download web builds to tmp
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "cd /tmp && wget https://github.com/dani-garcia/bw_web_builds/releases/download/{{ web_builds }}/bw_web_{{ web_builds }}.tar.gz"
+
+    - name: Extract web builds to tmp directory
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "tar -xf /tmp/bw_web_{{ web_builds }}.tar.gz -C /tmp"
+
+    - name: Backup old
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "if [ -d /opt/bitwarden/web-vault ]; then mv -f /opt/bitwarden/web-vault /opt/bitwarden/web-vault.old; fi"
+
+    - name: Move new
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "mv -f /tmp/web-vault /opt/bitwarden/web-vault"
+
+    - name: Write web version
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "echo {{ web_builds }} > /opt/bitwarden/web_version"
+
+    - name: Clean up
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "rm -rf /tmp/bw_web_*"
+
+- name: Deploy bitwarden(vaultwarden_rs) on LXC
+  gather_facts: no
+  hosts: bitwarden
+  connection: local
+  ignore_errors: no
+  vars:
+    vaultwarden_version: "1.33.2"
+  tasks:
+    - name: Read current version
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "if [ -f /opt/bitwarden/version ]; then cat /opt/bitwarden/version; fi"
+      register: version
+
+    - name: Check current version
+      meta: end_play
+      when: version.output == vaultwarden_version
+
+    - name: Use USTC mirrors
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "sed -i 's/dl-cdn.alpinelinux.org/mirrors.ustc.edu.cn/g' /etc/apk/repositories"
+
+    - name: Install wget
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "apk update && apk add wget"
+
+    - name: Create run directory
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "mkdir -p /opt/bitwarden"
+
+    - name: Download to tmp
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "wget -c https://github.com/fengqi/vaultwarden-static/releases/download/{{ vaultwarden_version }}/vaultwarden-amd64-alpine.tar.gz -O /tmp/vaultwarden.tar.gz"
+
+    - name: Extract to tmp
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "tar -xf /tmp/vaultwarden.tar.gz -C /tmp"
+
+    - name: Backup old
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "if [ -f /opt/bitwarden/vaultwarden ]; then mv -f /opt/bitwarden/vaultwarden /opt/bitwarden/vaultwarden.old; fi"
+
+    - name: Move new
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "mv -f /tmp/vaultwarden-amd64-alpine /opt/bitwarden/vaultwarden"
+
+    - name: Push .env file
+      pct:
+        cmd: "push"
+        host: "{{ inventory_hostname }}"
+        src: "./apps/bitwarden/.env"
+        dest: "/opt/bitwarden/.env"
+        extra_args: "--perms 0644"
+
+    - name: Create init.d
+      pct:
+        cmd: "push"
+        host: "{{ inventory_hostname }}"
+        src: "./apps/bitwarden/init.d.sh"
+        dest: "/etc/init.d/vaultwarden"
+        extra_args: "--perms 0755"
+
+    - name: Create Update Daemon
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "rc-update add vaultwarden"
+
+    - name: Restart vaultwarden
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "/etc/init.d/vaultwarden restart"
+
+    - name: Write current version
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "echo {{ vaultwarden_version }} > /opt/bitwarden/version"
+
+    - name: Clean up
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "rm -rf /tmp/vaultwarden*"
