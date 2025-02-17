@@ -1,4 +1,4 @@
-- name: Deply memos on LXC
+- name: Deploy memos on LXC
   gather_facts: no
   hosts: memos
   connection: local
