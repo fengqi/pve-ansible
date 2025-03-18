@@ -4,7 +4,7 @@
   connection: local
   ignore_errors: no
   vars:
-    gitea_version: "1.23.1"
+    gitea_version: "1.23.5"
   tasks:
     - name: Read current version
       pct:
