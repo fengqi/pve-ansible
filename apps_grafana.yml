@@ -1,0 +1,106 @@
+- name: Deploy grafana on LXC debian # TODO: alpine
+  gather_facts: no
+  hosts: grafana
+  connection: local
+  ignore_errors: no
+  vars:
+    grafana_version: "11.5.3"
+  tasks:
+    - name: Read current version
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "if [ -f /opt/grafana/version ]; then cat /opt/grafana/version; fi"
+      register: version
+
+    - name: Check current version
+      meta: end_play
+      when: version.output == grafana_version
+
+    - name: Use USTC mirrors
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "sed -i 's/deb.debian.org/mirrors.ustc.edu.cn/g' /etc/apt/sources.list"
+
+    - name: Install wget
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "apt update && apt install wget -y"
+
+    - name: Create run directory
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "mkdir -p /opt/grafana"
+
+    - name: Download grafana
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "cd /tmp && wget -c https://dl.grafana.com/oss/release/grafana-{{ grafana_version }}.linux-amd64.tar.gz"
+
+    - name: Extract grafana
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "cd /tmp; tar xzf /tmp/grafana-{{ grafana_version }}.linux-amd64.tar.gz"
+
+    - name: Delete old backup
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "rm -rf /opt/grafana.old"
+
+    - name: Backup old
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "if [ -d /opt/grafana ]; then mv -f /opt/grafana /opt/grafana.old; fi"
+
+    - name: Move new
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "mv -f /tmp/grafana-v{{ grafana_version }} /opt/grafana"
+
+    - name: Restore data
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "if [ -d /opt/grafana.old/data ]; then cp -r /opt/grafana.old/data /opt/grafana/data; fi"
+
+    - name: Push custom.ini
+      pct:
+        cmd: "push"
+        host: "{{ inventory_hostname }}"
+        src: "./apps/grafana/custom.ini"
+        dest: "/opt/grafana/conf/custom.ini"
+        extra_args: "--perms 0644"
+
+    - name: Create systemd service
+      pct:
+        cmd: "push"
+        host: "{{ inventory_hostname }}"
+        src: "./apps/grafana/grafana.service"
+        dest: "/lib/systemd/system/grafana.service"
+        extra_args: "--perms 0644"
+
+    - name: Enable grafana
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "systemctl daemon-reload && systemctl enable grafana && systemctl restart grafana"
+
+    - name: Write current version
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "echo {{ grafana_version }} > /opt/grafana/version"
+
+    - name: Clean up
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "rm -rf /tmp/grafana-*"

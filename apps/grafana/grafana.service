@@ -1,0 +1,12 @@
+[Unit]
+Description=The open-source platform for monitoring and observability
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/grafana
+ExecStart=/opt/grafana/bin/grafana server -config /opt/grafana/conf/custom.ini
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
