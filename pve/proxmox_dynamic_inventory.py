@@ -25,7 +25,7 @@ def generate_inventory(status_filter=None):
     # 获取 KVM 虚拟机
     vms = get_pvesh_data("/nodes/pve/qemu")
     for vm in vms:
-        if status_filter and vm.get("status") != status_filter:
+        if status_filter and not vm.get("status").startswith(status_filter):
             continue
         vm_name = vm.get("name", f"vm-{vm['vmid']}")
         inventory["all"]["hosts"].append(vm_name)
@@ -34,7 +34,7 @@ def generate_inventory(status_filter=None):
     # 获取 LXC 容器
     lxcs = get_pvesh_data("/nodes/pve/lxc")
     for lxc in lxcs:
-        if status_filter and lxc.get("status") != status_filter:
+        if status_filter and not lxc.get("status").startswith(status_filter):
             continue
         lxc_name = lxc.get("name", f"lxc-{lxc['vmid']}")
         inventory["all"]["hosts"].append(lxc_name)
