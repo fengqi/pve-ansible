@@ -3,7 +3,7 @@
   hosts: vm
   vars:
     shell_path: "./scripts"
-    shell_file: "update.sh"
+    shell_file: "os_release.sh"
   ignore_errors: yes
   tasks:
     - name: Create a temporary directory
@@ -33,7 +33,7 @@
   connection: local
   vars:
     shell_path: "./scripts"
-    shell_file: "update.sh"
+    shell_file: "os_release.sh"
   ignore_errors: yes
   tasks:
     - name: Create a temporary directory on LXC
