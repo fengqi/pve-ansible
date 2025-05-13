@@ -1,6 +1,6 @@
 - name: Deply ttrss
   gather_facts: no
-  hosts: testrss
+  hosts: ttrss
   connection: local
   ignore_errors: yes
   tasks:
@@ -15,64 +15,76 @@
         cmd: "exec"
         host: "{{ inventory_hostname }}"
         extra_args: "apk update"
+
+    - name: Install git
       pct:
         cmd: "exec"
         host: "{{ inventory_hostname }}"
         extra_args: "apk add git"
+    - name: Install nginx
       pct:
         cmd: "exec"
         host: "{{ inventory_hostname }}"
         extra_args: "apk add nginx"
+
+    - name: Install php
       pct:
         cmd: "exec"
         host: "{{ inventory_hostname }}"
-        extra_args: "apk add php83 php83-common php83-ctype php83-curl php83-dom php83-exif
-          php83-fileinfo php83-fpm php83-gd php83-iconv php83-intl php83-mbstring
-          php83-mysqlnd php83-opcache php83-openssl php83-pcntl php83-pdo php83-pdo_mysql
-          php83-pecl-apcu php83-phar php83-posix php83-session php83-simplexml
-          php83-sockets php83-tokenizer php83-xml php83-xmlwriter php83-xsl php83-zip"
+        extra_args: "apk add php83 php83-common php83-ctype php83-curl php83-dom \
+          php83-exif php83-fileinfo php83-fpm php83-gd php83-iconv php83-intl \
+          php83-mbstring php83-mysqlnd php83-opcache php83-openssl php83-pcntl \
+          php83-pdo php83-pdo_mysql php83-pecl-apcu php83-phar php83-posix \
+          php83-session php83-simplexml php83-sockets php83-tokenizer php83-xml \
+          php83-xmlwriter php83-xsl php83-zip"
 
     - name: Directory exists
       pct:
         cmd: "exec"
         host: "{{ inventory_hostname }}"
-        extra_args: "test -d /var/www/ttrss"
+        extra_args: "if [ -d /data/www/tt-rss ]; then echo yes; else echo no; fi"
       register: directory_exists
 
     - name: Create directory
       pct:
         cmd: "exec"
         host: "{{ inventory_hostname }}"
-        extra_args: "mkdir -p /var/www/ttrss"
-      when: not directory_exists.output == ""
+        extra_args: "mkdir -p /data/www/tt-rss"
+      when: not directory_exists.output == "yes"
+
+    - name: Config safe.directory
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "git config --global --add safe.directory /data/www/tt-rss"
 
     - name: Deploy ttrss
       pct:
         cmd: "exec"
         host: "{{ inventory_hostname }}"
-        extra_args: "git clone https://gitlab.tt-rss.org/tt-rss/tt-rss.git /var/www/ttrss"
-      when: not directory_exists.output == ""
+        extra_args: "git clone https://gitlab.tt-rss.org/tt-rss/tt-rss.git /data/www/tt-rss"
+      when: not directory_exists.output == "yes"
 
     - name: Update ttrss
       pct:
         cmd: "exec"
         host: "{{ inventory_hostname }}"
-        extra_args: "git -C /var/www/ttrss pull"
-      when: directory_exists.output == ""
+        extra_args: "git -C /data/www/tt-rss pull"
+      when: directory_exists.output == "yes"
 
     - name: Create config.php
       pct:
         cmd: "push"
         host: "{{ inventory_hostname }}"
         src: "./apps/ttrss/config.php"
-        dest: "/var/www/ttrss/config.php"
+        dest: "/data/www/tt-rss/config.php"
         extra_args: "--perms 0644"
 
     - name: Chown ttrss
       pct:
         cmd: "exec"
         host: "{{ inventory_hostname }}"
-        extra_args: "chown -R nobody:nobody /var/www/ttrss"
+        extra_args: "chown -R nobody:nobody /data/www/tt-rss"
 
     - name: Create Update Daemon
       pct:
@@ -92,6 +104,7 @@
         host: "{{ inventory_hostname }}"
         src: "./apps/ttrss/nginx.conf"
         dest: "/etc/nginx/http.d/ttrss.conf"
+        extra_args: "--perms 0644"
 
     - name: Restart Service
       pct:
