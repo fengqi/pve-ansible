@@ -20,7 +20,11 @@ def get_pvesh_data(endpoint):
 
 # 生成动态 Inventory
 def generate_inventory(status_filter=None):
-    inventory = {"all": {"hosts": [], "children": ["vm", "lxc"]}, "vm": {"hosts": []}, "lxc": {"hosts": []}}
+    inventory = {
+        "all": {"hosts": [], "children": ["vm", "lxc"]}, 
+        "vm": {"hosts": []}, "lxc": {"hosts": []},
+        "_meta": {"hostvars": {}},
+    }
 
     # 获取 KVM 虚拟机
     vms = get_pvesh_data("/nodes/pve/qemu")
@@ -30,6 +34,16 @@ def generate_inventory(status_filter=None):
         vm_name = vm.get("name", f"vm-{vm['vmid']}")
         inventory["all"]["hosts"].append(vm_name)
         inventory["vm"]["hosts"].append(vm_name)
+        inventory["_meta"]["hostvars"][vm_name] = {
+            "status": vm.get("status"),
+            "name": vm_name,
+            "cpu": vm.get("cpu"),
+            "cpus": vm.get("cpus"),
+            "vmid": vm.get("vmid"),
+            "memory": vm.get("maxmem"),
+            "disk": vm.get("maxdisk"),
+            "type": "vm"
+        }
 
     # 获取 LXC 容器
     lxcs = get_pvesh_data("/nodes/pve/lxc")
@@ -39,6 +53,16 @@ def generate_inventory(status_filter=None):
         lxc_name = lxc.get("name", f"lxc-{lxc['vmid']}")
         inventory["all"]["hosts"].append(lxc_name)
         inventory["lxc"]["hosts"].append(lxc_name)
+        inventory["_meta"]["hostvars"][lxc_name] = {
+            "status": vm.get("status"),
+            "name": lxc_name,
+            "cpu": vm.get("cpu"),
+            "cpus": vm.get("cpus"),
+            "vmid": vm.get("vmid"),
+            "memory": vm.get("maxmem"),
+            "disk": vm.get("maxdisk"),
+            "type": "lxc"
+        }
 
     # 为 LXC 组添加 ansible_connection 配置（作用于所有 lxc 容器）
     #inventory["lxc"]["ansible_connection"] = "lxc"
@@ -56,11 +80,14 @@ def get_host_info(host):
         vm_name = vm.get("name", f"vm-{vm['vmid']}")
         if vm_name == host:
             host_info = {
-                "name": vm_name,
-                "vmid": vm["vmid"],
                 "status": vm["status"],
+                "name": vm_name,
                 "cpu": vm["cpu"],
-                "memory": vm["maxmem"]
+                "cpus": vm["cpus"],
+                "vmid": vm["vmid"],
+                "memory": vm["maxmem"],
+                "disk": vm.get("maxdisk"),
+                "type": "vm"
             }
             break
 
@@ -71,11 +98,14 @@ def get_host_info(host):
             lxc_name = lxc.get("name", f"lxc-{lxc['vmid']}")
             if lxc_name == host:
                 host_info = {
-                    "name": lxc_name,
-                    "vmid": lxc["vmid"],
                     "status": lxc["status"],
+                    "name": lxc_name,
                     "cpu": lxc["cpu"],
-                    "memory": lxc["maxmem"]
+                    "cpus": lxc["cpus"],
+                    "vmid": lxc["vmid"],
+                    "memory": lxc["maxmem"],
+                    "disk": lxc["maxdisk"],
+                    "type": "lxc"
                 }
                 break
 
@@ -96,7 +126,7 @@ if __name__ == "__main__":
             inventory = generate_inventory(status_filter)
             print(json.dumps(inventory, indent=2))
 
-        elif sys.argv[1] == "--host11" and len(sys.argv) > 2:
+        elif sys.argv[1] == "--host" and len(sys.argv) > 2:
             # 显示单独主机的信息
             host = sys.argv[2]
             host_info = get_host_info(host)
