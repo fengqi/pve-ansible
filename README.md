@@ -1,6 +1,6 @@
 # pve-ansible
 Managing PVE using Ansible
-使用 Ansible管理PVE
+使用 Ansible 管理PVE
 
 ## 功能列表
 - 批量开关机

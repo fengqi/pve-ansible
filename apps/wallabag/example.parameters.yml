@@ -1,0 +1,35 @@
+# Meaning of each parameter https://doc.wallabag.org/admin/parameters/
+parameters:
+    database_driver: <pdo_mysql|pdo_pgsql|pdo_sqlite>
+    database_host: <127.0.0.1|localhost>
+    database_port: <3306|5432|3307>
+    database_name: <wallabag|wallabag>
+    database_user: <wallabag|wallabag>
+    database_password: <password>
+    database_path: null
+    database_table_prefix: wallabag_
+    database_socket: null
+    database_charset: utf8mb4
+    domain_name: '<https://www.example.com>'
+    server_name: 'Your wallabag instance'
+    mailer_dsn: 'smtp://username:password@127.0.0.1:25'
+    locale: zh
+    secret: <secret>
+    twofactor_sender: no-reply@wallabag.org
+    fosuser_registration: true
+    fosuser_confirmation: true
+    fos_oauth_server_access_token_lifetime: 3600
+    fos_oauth_server_refresh_token_lifetime: 1209600
+    from_email: no-reply@wallabag.org
+    rss_limit: 50
+    rabbitmq_host: localhost
+    rabbitmq_port: 5672
+    rabbitmq_user: guest
+    rabbitmq_password: guest
+    rabbitmq_prefetch_count: 10
+    redis_scheme: tcp
+    redis_host: <127.0.0.1|localhost>
+    redis_port: <6379|6380>
+    redis_path: null
+    redis_password: <password>
+    sentry_dsn: null

@@ -1,0 +1,212 @@
+- name: Deploy wallabag on LXC
+  gather_facts: no
+  hosts: wallabag
+  connection: local
+  ignore_errors: no
+  vars:
+    wallabag_version: "2.6.13"
+    env: "prod"
+  tasks:
+    - name: Check current version
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "if [ -f /data/www/wallabag/version ]; then cat /data/www/wallabag/version; fi"
+      register: result
+
+    - name: Check current version
+      meta: end_play
+      when: result.output == wallabag_version
+
+    - name: Use USTC mirrors
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "sed -i 's/dl-cdn.alpinelinux.org/mirrors.ustc.edu.cn/g' /etc/apk/repositories"
+
+    - name: Check php install
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "if [ -f /usr/bin/php ]; then echo yes; else echo no; fi"
+      register: php_exists
+
+    - name: Install php
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "apk add php84 php84-session php84-ctype php84-dom php84-simplexml \
+          php84-json php84-gd php84-mbstring php84-xml php84-tidy php84-iconv php84-curl \
+          php84-gettext php84-tokenizer php84-bcmath php84-intl php84-fpm php84-opcache \
+          php84-pdo_mysql php84-phar php84-sodium php84-sockets php84-xmlreader"
+      when: php_exists.output == "no"
+
+    - name: Link php
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "ln -sf /usr/bin/php84 /usr/bin/php"
+      when: php_exists.output == "no"
+
+    - name: Install curl
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "apk add curl"
+
+    - name: Check composer
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "if [ -f /usr/bin/composer ]; then echo yes; else echo no; fi"
+      register: composer_exists
+
+    - name: Install composer
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/bin --filename=composer"
+      register: composer
+      when: composer_exists.output == "no"
+
+    - name: Chmod composer
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "chmod +x /usr/bin/composer"
+
+    - name: Update composer
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "composer self-update"
+      when: composer_exists.output == "yes"
+
+    - name: Install git bash
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "apk add git bash"
+
+    - name: Directory exists
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "if [ -d /data/www/wallabag ]; then echo yes; else echo no; fi"
+      register: directory_exists
+
+    - name: Create directory
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "mkdir -p /data/www/wallabag"
+      when: not directory_exists.output == "yes"
+
+    - name: Deploy wallabag
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "git clone https://github.com/wallabag/wallabag.git /data/www/wallabag"
+      when: not directory_exists.output == "yes"
+
+    - name: Config wallabag
+      pct:
+        cmd: "push"
+        host: "{{ inventory_hostname }}"
+        src: "./apps/wallabag/parameters.yml"
+        dest: "/data/www/wallabag/app/config/parameters.yml"
+        extra_args: "--perms 0644"
+
+    - name: Check wallabag install
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "if [ -d /data/www/wallabag/vendor ]; then echo yes; else echo no; fi"
+      register: install_exists
+
+    - name: Install wallabag
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "cd /data/www/wallabag && git checkout {{ wallabag_version }} && SYMFONY_ENV={{ env }} composer install --no-dev -o --prefer-dist"
+      when: install_exists.output == "no"
+
+    - name: Init database
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "cd /data/www/wallabag && php bin/console wallabag:install --env={{ env }} --no-interaction"
+      when: install_exists.output == "no"
+
+    - name: Update wallabag
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "cd /data/www/wallabag && git checkout {{ wallabag_version }} && SYMFONY_ENV={{ env }} composer install --no-dev -o --prefer-dist"
+      when: install_exists.output == "yes"
+
+    - name: Update database
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "cd /data/www/wallabag && php bin/console doctrine:migrations:migrate --env={{ env }} --no-interaction"
+      when: install_exists.output == "yes"
+
+    - name: Clear cache
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "cd /data/www/wallabag && php bin/console cache:clear --env={{ env }}"
+      when: install_exists.output == "yes"
+
+    - name: Restart php-fpm
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "rc-service php-fpm84 restart"
+
+    - name: Check nginx install
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "if [ -f /usr/bin/nginx ]; then echo yes; else echo no; fi"
+      register: nginx_exists
+
+    - name: Install nginx
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "apk add nginx"
+      when: nginx_exists.output == "no"
+
+    - name: Change nginx user
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "sed -i 's/user nginx/user nobody/g' /etc/nginx/nginx.conf"
+
+    - name: Config nginx vhost
+      pct:
+        cmd: "push"
+        host: "{{ inventory_hostname }}"
+        src: "./apps/wallabag/nginx.conf"
+        dest: "/etc/nginx/http.d/wallabag.conf"
+        extra_args: "--perms 0644"
+
+    - name: Restart nginx
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "rc-service nginx restart"
+
+    - name: Write current version
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "echo {{ wallabag_version }} > /data/www/wallabag/version"
+
+    - name: Chown wallabag
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "chown -R nobody:nobody /data/www/wallabag"
