@@ -4,7 +4,7 @@
   connection: local
   ignore_errors: no
   vars:
-    komga_version: "1.18.0"
+    komga_version: "1.22.0"
   tasks:
     - name: Read current version
       pct:
