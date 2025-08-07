@@ -4,7 +4,7 @@
   connection: local
   ignore_errors: no
   vars:
-    gitea_version: "1.23.7"
+    gitea_version: "1.24.4"
     site: "https://docs.gitea.com/zh-cn/installation/install-from-binary"
   tasks:
     - name: Read current version
