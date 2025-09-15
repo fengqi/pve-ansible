@@ -21,7 +21,7 @@ def get_pvesh_data(endpoint):
 # 生成动态 Inventory
 def generate_inventory(status_filter=None):
     inventory = {
-        "all": {"hosts": [], "children": ["vm", "lxc"]}, 
+        "all": {"hosts": [], "children": ["vm", "lxc"]},
         "vm": {"hosts": []}, "lxc": {"hosts": []},
         "_meta": {"hostvars": {}},
     }
@@ -36,7 +36,7 @@ def generate_inventory(status_filter=None):
         inventory["vm"]["hosts"].append(vm_name)
         inventory["_meta"]["hostvars"][vm_name] = {
             "status": vm.get("status"),
-            "name": vm_name,
+            "hostname": vm_name,
             "cpu": vm.get("cpu"),
             "cpus": vm.get("cpus"),
             "vmid": vm.get("vmid"),
@@ -55,7 +55,7 @@ def generate_inventory(status_filter=None):
         inventory["lxc"]["hosts"].append(lxc_name)
         inventory["_meta"]["hostvars"][lxc_name] = {
             "status": vm.get("status"),
-            "name": lxc_name,
+            "hostname": lxc_name,
             "cpu": vm.get("cpu"),
             "cpus": vm.get("cpus"),
             "vmid": vm.get("vmid"),
@@ -81,7 +81,7 @@ def get_host_info(host):
         if vm_name == host:
             host_info = {
                 "status": vm["status"],
-                "name": vm_name,
+                "hostname": vm_name,
                 "cpu": vm["cpu"],
                 "cpus": vm["cpus"],
                 "vmid": vm["vmid"],
@@ -99,7 +99,7 @@ def get_host_info(host):
             if lxc_name == host:
                 host_info = {
                     "status": lxc["status"],
-                    "name": lxc_name,
+                    "hostname": lxc_name,
                     "cpu": lxc["cpu"],
                     "cpus": lxc["cpus"],
                     "vmid": lxc["vmid"],
