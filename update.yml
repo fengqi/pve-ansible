@@ -24,7 +24,7 @@
       register: apk_update
 
     - name: Apt Upgrade
-      shell: apt-get dist-upgrade -y
+      shell: apt-get -o Dpkg::Options::="--force-confold" dist-upgrade -y
       when: os_type.stdout == 'ubuntu' or os_type.stdout == 'debian'
       register: apt_upgrade
 
@@ -115,7 +115,7 @@
       pct:
         cmd: "exec"
         host: "{{ inventory_hostname }}"
-        extra_args: "apt-get dist-upgrade -y"
+        extra_args: "apt-get -o Dpkg::Options::=\"--force-confold\" dist-upgrade -y"
       when: os_type.output == 'ubuntu' or os_type.output == 'debian'
       register: apt_upgrade
 
