@@ -139,7 +139,7 @@
       pct:
         cmd: "exec"
         host: "{{ inventory_hostname }}"
-        extra_args: "apt-get autoremove -y && apt-get clean"
+        extra_args: "apt-get autoremove -y && apt-get clean && rm -rf /var/lib/apt/lists/*"
       when: os_type.output == 'ubuntu' or os_type.output == 'debian'
       register: apt_clean
 
@@ -147,7 +147,7 @@
       pct:
         cmd: "exec"
         host: "{{ inventory_hostname }}"
-        extra_args: "yum clean all"
+        extra_args: "yum clean all && rm -rf /var/cache/yum"
       when: os_type.output == 'centos' or os_type.output == 'fedora'
       register: yum_clean
 
@@ -155,7 +155,7 @@
       pct:
         cmd: "exec"
         host: "{{ inventory_hostname }}"
-        extra_args: "apk cache clean"
+        extra_args: "apk cache clean && rm -rf /var/cache/apk/*"
       when: os_type.output == 'alpine'
 
     - name: Apt result

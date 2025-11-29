@@ -3,21 +3,36 @@
   hosts: vm
   vars:
     shell_path: "./scripts"
-    shell_file: "os_release.sh"
   ignore_errors: yes
   tasks:
+    - name: Ensure file is provided
+      assert:
+        that: file is defined
+        fail_msg: "Please pass -e 'file=xxx'"
+        quiet: true
+      run_once: true
+
+    - name: check if file exists
+      local_action: stat path="{{ shell_path }}/{{ file }}"
+      register: check_file_name
+      run_once: true
+
+    - name: Verifying if file exists
+      meta: end_play
+      when: not check_file_name.stat.exists
+
     - name: Create a temporary directory
       shell: mktemp -d
       register: temp_dir
 
     - name: Push script
       copy:
-        src: "{{ shell_path }}/{{ shell_file }}"
-        dest: "{{ temp_dir.stdout }}/{{ shell_file }}"
+        src: "{{ shell_path }}/{{ file }}"
+        dest: "{{ temp_dir.stdout }}/{{ file }}"
         mode: '0755'
 
     - name: Exec script
-      shell: "{{ temp_dir.stdout }}/{{ shell_file }}"
+      shell: "{{ temp_dir.stdout }}/{{ file }}"
       register: result
 
     - name: Clean
@@ -33,9 +48,24 @@
   connection: local
   vars:
     shell_path: "./scripts"
-    shell_file: "os_release.sh"
   ignore_errors: yes
   tasks:
+    - name: Ensure file is provided
+      assert:
+        that: file is defined
+        fail_msg: "Please pass -e 'file=xxx'"
+        quiet: true
+      run_once: true
+
+    - name: check if file exists
+      local_action: stat path="{{ shell_path }}/{{ file }}"
+      register: check_file_name
+      run_once: true
+
+    - name: Verifying if file exists
+      meta: end_play
+      when: not check_file_name.stat.exists
+
     - name: Create a temporary directory on LXC
       pct:
         cmd: "exec"
@@ -47,15 +77,15 @@
       pct:
         cmd: "push"
         host: "{{ inventory_hostname }}"
-        src: "{{ shell_path }}/{{ shell_file }}"
-        dest: "{{ temp_dir.output }}/{{ shell_file }}"
+        src: "{{ shell_path }}/{{ file }}"
+        dest: "{{ temp_dir.output }}/{{ file }}"
         extra_args: "--perms 0755"
 
     - name: Exec script
       pct:
         cmd: "exec"
         host: "{{ inventory_hostname }}"
-        extra_args: "{{ temp_dir.output }}/{{ shell_file }}"
+        extra_args: "{{ temp_dir.output }}/{{ file }}"
       register: result
 
     - name: Clean
