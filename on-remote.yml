@@ -3,11 +3,13 @@
   hosts: vm
   vars:
     shell_path: "./scripts"
-  ignore_errors: yes
+  ignore_errors: no
   tasks:
     - name: Ensure file is provided
       assert:
-        that: file is defined
+        that: 
+          - file is defined
+          - file | length > 0
         fail_msg: "Please pass -e 'file=xxx'"
         quiet: true
       run_once: true
@@ -48,11 +50,13 @@
   connection: local
   vars:
     shell_path: "./scripts"
-  ignore_errors: yes
+  ignore_errors: no
   tasks:
     - name: Ensure file is provided
       assert:
-        that: file is defined
+        that: 
+          - file is defined
+          - file | length > 0
         fail_msg: "Please pass -e 'file=xxx'"
         quiet: true
       run_once: true
