@@ -3,7 +3,7 @@
   hosts: vm
   tasks:
     - name: Get os type
-      shell: bash -c 'source /etc/os-release && echo $ID-$VERSION_ID'
+      shell: bash -c 'source /etc/os-release && echo $PRETTY_NAME'
       register: os_type
 
     - name: Print os type
@@ -19,7 +19,7 @@
       pct:
         cmd: "exec"
         host: "{{ inventory_hostname }}"
-        extra_args: source /etc/os-release && echo $ID-$VERSION_ID
+        extra_args: source /etc/os-release && echo $PRETTY_NAME
       register: os_type
 
     - name: Print os type
