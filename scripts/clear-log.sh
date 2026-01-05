@@ -42,6 +42,44 @@ function clear_redhat() {
     rm -rf /var/cache/yum
 }
 
+function clrar_samba_log() {
+    if [ ! -d "/var/log/samba" ]; then
+        return
+    fi
+
+    rm -rf /var/log/samba/*
+}
+
+function clear_frp_log() {
+    rm -rf /var/log/frps.202*
+    rm -rf /var/log/frpc.202*
+}
+
+function clear_docker_log() {
+    rm -rf /var/log/docker.log.*
+}
+
+function clear_nginx_log() {
+    rm -rf /var/log/nginx/access.log.*
+    rm -rf /var/log/nginx/error.log.*
+    rm -rf /var/log/nginx/*.log-*
+}
+
+function clear_php_log() {
+    rm -rf /var/log/php/errors.log.*
+    rm -rf /var/log/*/*.log-*
+}
+
+function show_log_list() {
+    command -v tree > /dev/null && tree -L 2 /var/log || ls /var/log
+}
+
 clear_alpine
 clear_debian
 clear_redhat
+clear_frp_log
+clear_samba_log
+clear_docker_log
+clear_nginx_log
+clear_php_log
+show_log_list
