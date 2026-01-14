@@ -66,7 +66,23 @@ def push(module, vmid):
         cmd += f" {extraArgs}"
 
     result = run_command(module, cmd)
-    module.exit_json(changed=True, msg=f"File {src} successfully pushed to {vmid}:{dest}.", output=result)
+    module.exit_json(changed=True, msg=f"File {src} successfully pushed to {vmid}:{dest}.", output=result, output_lines=result.splitlines())
+
+def pull(module, vmid):
+    src = module.params['src']
+    dest = module.params['dest']
+
+    if not file_exists(module, vmid, src):
+        module.fail_json(msg=f"Source file {src} does not exist in VM {vmid}.")
+
+    cmd = f"pct pull {vmid} {src} {dest}"
+
+    extraArgs = module.params['extra_args']
+    if extraArgs:
+        cmd += f" {extraArgs}"
+
+    result = run_command(module, cmd)
+    module.exit_json(changed=True, msg=f"File {src} successfully pulled from {vmid}:{dest}.", output=result, output_lines=result.splitlines())
 
 def exec(module, vmid):
     extraArgs = module.params['extra_args']
@@ -79,7 +95,7 @@ def exec(module, vmid):
 
     cmd = f"pct exec {vmid} {extraArgs}"
     result = run_command(module, cmd)
-    module.exit_json(changed=True, msg=f"Command {cmd} executed successfully.", output=result)
+    module.exit_json(changed=True, msg=f"Command {cmd} executed successfully.", output=result, output_lines=result.splitlines())
 
 def start(module, vmid):
     cmd = f"pct start {vmid}"
@@ -88,7 +104,7 @@ def start(module, vmid):
         cmd += f" {extraArgs}"
 
     result = run_command(module, cmd)
-    module.exit_json(changed=True, msg=f"Command {cmd} executed successfully.", output=result)
+    module.exit_json(changed=True, msg=f"Command {cmd} executed successfully.", output=result, output_lines=result.splitlines())
 
 def shutdown(module, vmid):
     cmd = f"pct shutdown {vmid}"
@@ -97,7 +113,7 @@ def shutdown(module, vmid):
         cmd += f" {extraArgs}"
 
     result = run_command(module, cmd)
-    module.exit_json(changed=True, msg=f"Command {cmd} executed successfully.", output=result)
+    module.exit_json(changed=True, msg=f"Command {cmd} executed successfully.", output=result, output_lines=result.splitlines())
 
 def main():
     module_args = dict(
@@ -124,6 +140,8 @@ def main():
     match cmd:
         case "push":
             push(module, vmid)
+        case "pull":
+            pull(module, vmid)
         case "exec":
             exec(module, vmid)
         case "start":

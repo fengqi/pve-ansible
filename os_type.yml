@@ -3,12 +3,13 @@
   hosts: vm
   tasks:
     - name: Get os type
-      shell: bash -c 'source /etc/os-release && echo $PRETTY_NAME'
+      shell: "sh -c 'cat /etc/os-release'"
+      #command: cat /etc/os-release
       register: os_type
 
     - name: Print os type
       debug:
-        msg: "{{ os_type.stdout }}"
+        msg: "{{ os_type.stdout_lines }}"
 
 - name: Get os type
   gather_facts: no
@@ -19,9 +20,9 @@
       pct:
         cmd: "exec"
         host: "{{ inventory_hostname }}"
-        extra_args: source /etc/os-release && echo $PRETTY_NAME
+        extra_args: cat /etc/os-release
       register: os_type
 
     - name: Print os type
       debug:
-        msg: "{{ os_type.output }}"
+        msg: "{{ os_type.output_lines }}"
