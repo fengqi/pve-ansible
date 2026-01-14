@@ -31,6 +31,8 @@ function clear_debian() {
     for i in `dpkg -l | grep ^rc |awk '{print $2}'`;do dpkg -P $i;done
     apt-get clean
     rm -rf /var/lib/apt/lists/*
+    rm -rf rm -f /var/lib/dpkg/available-old
+    rm -rf rm -f /var/lib/dpkg/diversions-old
 }
 
 function clear_redhat() {
