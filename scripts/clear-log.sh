@@ -76,6 +76,14 @@ function show_log_list() {
     command -v tree > /dev/null && tree -L 2 /var/log || ls /var/log
 }
 
+function ifupdown() {
+    if [ ! -d "/var/log/ifupdown2" ]; then
+        return
+    fi
+
+    find /var/log/ifupdown2 -type d -mtime +10 -delete
+}
+
 clear_alpine
 clear_debian
 clear_redhat
@@ -85,3 +93,5 @@ clear_docker_log
 clear_nginx_log
 clear_php_log
 show_log_list
+ifupdown
+
