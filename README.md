@@ -40,3 +40,9 @@ ansible-playbook -i pve on-remote.yml --limit gitea
 STATUS=running ansible-playbook -i pve shutdown.yml --limit lxc
 STATUS=running ansible-playbook -i pve shutdown.yml --limit vm
 ```
+
+4. 在vm、lxc上执行日志清理脚本
+```bash
+STATUS=runn ansible-playbook -i pve on-remote.yml -e 'file=clear-log.sh' --limit vm
+STATUS=runn ansible-playbook -i pve on-remote.yml -e 'file=clear-log.sh' --limit lxc
+```
