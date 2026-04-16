@@ -1,0 +1,276 @@
+# init.yml
+---
+- name: Init vm hosts
+  gather_facts: no
+  hosts: vm
+  tasks:
+    - name: Get os type and version
+      shell: |
+        . /etc/os-release && echo "$ID|${VERSION_ID:-}|${VERSION_CODENAME:-}"
+      register: os_info
+
+    - set_fact:
+        os_type: "{{ os_info.stdout.split('|')[0] }}"
+        os_version: "{{ os_info.stdout.split('|')[1] }}"
+        os_codename: "{{ os_info.stdout.split('|')[2] }}"
+
+    - name: Config Alpine mirror
+      shell: |
+        VER=$(echo {{ os_version }} | cut -d. -f1,2)
+        echo "http://varnish.fengqi.io/alpine/v$VER/main" > /etc/apk/repositories
+        echo "http://varnish.fengqi.io/alpine/v$VER/community" >> /etc/apk/repositories
+      when: os_type == 'alpine'
+      register: alpine_mirror
+
+    - name: Config Debian testing mirror (DEB822 format)
+      shell: |
+        cat > /etc/apt/sources.list.d/debian.sources << EOF
+        Types: deb
+        URIs: http://varnish.fengqi.io/debian
+        Suites: testing testing-updates testing-backports
+        Components: main contrib non-free non-free-firmware
+        Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg
+        EOF
+        cat >> /etc/apt/sources.list.d/debian.sources << EOF
+
+        Types: deb
+        URIs: http://varnish.fengqi.io/debian-security
+        Suites: testing-security
+        Components: main contrib non-free non-free-firmware
+        Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg
+        EOF
+        rm -f /etc/apt/sources.list
+      when: os_type == 'debian' and os_version == ''
+      register: debian_testing_mirror
+
+    - name: Config Debian mirror (old version <= 11)
+      shell: |
+        cat > /etc/apt/sources.list << EOF
+        deb http://varnish.fengqi.io/debian/ {{ os_codename }} main contrib non-free
+        deb-src http://varnish.fengqi.io/debian/ {{ os_codename }}-updates main contrib non-free
+        deb http://varnish.fengqi.io/debian-security/ {{ os_codename }}-security main contrib non-free
+        deb http://varnish.fengqi.io/debian/ {{ os_codename }}-backports main contrib non-free
+        EOF
+      when: os_type == 'debian' and os_version != '' and os_version is version('11', '<=')
+      register: debian_old_mirror
+
+    - name: Config Debian mirror (new version >= 12, DEB822 format)
+      shell: |
+        cat > /etc/apt/sources.list.d/debian.sources << EOF
+        Types: deb
+        URIs: http://varnish.fengqi.io/debian
+        Suites: {{ os_codename }} {{ os_codename }}-updates {{ os_codename }}-backports
+        Components: main contrib non-free non-free-firmware
+        Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg
+        EOF
+        cat >> /etc/apt/sources.list.d/debian.sources << EOF
+
+        Types: deb
+        URIs: http://varnish.fengqi.io/debian-security
+        Suites: {{ os_codename }}-security
+        Components: main contrib non-free non-free-firmware
+        Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg
+        EOF
+        rm -f /etc/apt/sources.list
+      when: os_type == 'debian' and os_version != '' and os_version is version('12', '>=')
+      register: debian_new_mirror
+
+    - name: Config Ubuntu mirror (old version <= 22.04)
+      shell: |
+        cat > /etc/apt/sources.list << EOF
+        deb http://varnish.fengqi.io/ubuntu {{ os_codename }} main restricted universe multiverse
+        deb http://varnish.fengqi.io/ubuntu {{ os_codename }}-updates main restricted universe multiverse
+        deb http://varnish.fengqi.io/ubuntu {{ os_codename }}-backports main restricted universe multiverse
+        deb http://varnish.fengqi.io/ubuntu {{ os_codename }}-security main restricted universe multiverse
+        EOF
+      when: os_type == 'ubuntu' and os_version != '' and os_version is version('22.04', '<=')
+      register: ubuntu_old_mirror
+
+    - name: Config Ubuntu mirror (new version >= 24.04)
+      shell: |
+        cat > /etc/apt/sources.list.d/ubuntu.sources << EOF
+        Types: deb deb-src
+        URIs: http://varnish.fengqi.io/ubuntu
+        Suites: {{ os_codename }} {{ os_codename }}-updates {{ os_codename }}-backports
+        Components: main restricted universe multiverse
+        Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg
+        EOF
+        cat > /etc/apt/sources.list.d/ubuntu-security.sources << EOF
+        Types: deb deb-src
+        URIs: http://varnish.fengqi.io/ubuntu
+        Suites: {{ os_codename }}-security
+        Components: main restricted universe multiverse
+        Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg
+        EOF
+        rm -f /etc/apt/sources.list
+      when: os_type == 'ubuntu' and os_version != '' and os_version is version('24.04', '>=')
+      register: ubuntu_new_mirror
+
+    - name: Remove Ubuntu unnecessary packages
+      shell: apt-get purge -y cloud-init postfix && apt-get autoremove -y && apt-get purge -y $(dpkg -l | grep '^rc' | awk '{print $2}') 2>/dev/null || true
+      when: os_type == 'ubuntu'
+
+    - name: Remove Debian unnecessary packages
+      shell: apt-get purge -y postfix && apt-get autoremove -y && apt-get purge -y $(dpkg -l | grep '^rc' | awk '{print $2}') 2>/dev/null || true
+      when: os_type == 'debian'
+
+    - name: Apt update
+      shell: apt-get update
+      when: os_type == 'ubuntu' or os_type == 'debian'
+
+    - name: Apk update
+      shell: apk update
+      when: os_type == 'alpine'
+
+- name: Init LXC hosts
+  gather_facts: no
+  hosts: lxc
+  connection: local
+  tasks:
+    - name: Get os type and version
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: sh -c '. /etc/os-release && echo "$ID|${VERSION_ID:-}|${VERSION_CODENAME:-}"'
+      register: os_info
+
+    - set_fact:
+        os_type: "{{ os_info.output.split('|')[0] }}"
+        os_version: "{{ os_info.output.split('|')[1] }}"
+        os_codename: "{{ os_info.output.split('|')[2] }}"
+
+    - name: Config Alpine mirror
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: |
+              sh -c 'VER=$(echo {{ os_version }} | cut -d. -f1,2); echo "http://varnish.fengqi.io/alpine/v$VER/main" > /etc/apk/repositories && echo "http://varnish.fengqi.io/alpine/v$VER/community" >> /etc/apk/repositories'
+      when: os_type == 'alpine'
+      register: alpine_mirror
+
+    - name: Config Debian testing mirror (DEB822 format)
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: |
+            sh -c "cat > /etc/apt/sources.list.d/debian.sources << EOF
+            Types: deb
+            URIs: http://varnish.fengqi.io/debian
+            Suites: testing testing-updates testing-backports
+            Components: main contrib non-free non-free-firmware
+            Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg
+            EOF
+            cat >> /etc/apt/sources.list.d/debian.sources << EOF
+
+            Types: deb
+            URIs: http://varnish.fengqi.io/debian-security
+            Suites: testing-security
+            Components: main contrib non-free non-free-firmware
+            Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg
+            EOF
+            rm -f /etc/apt/sources.list"
+      when: os_type == 'debian' and os_version == ''
+      register: debian_testing_mirror
+
+    - name: Config Debian mirror (old version <= 11)
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: |
+            sh -c "cat > /etc/apt/sources.list << EOF
+            deb http://varnish.fengqi.io/debian/ $(. /etc/os-release && echo $VERSION_CODENAME) main contrib non-free
+            deb-src http://varnish.fengqi.io/debian/ $(. /etc/os-release && echo $VERSION_CODENAME)-updates main contrib non-free
+            deb http://varnish.fengqi.io/debian-security/ $(. /etc/os-release && echo $VERSION_CODENAME)-security main contrib non-free
+            deb http://varnish.fengqi.io/debian/ $(. /etc/os-release && echo $VERSION_CODENAME)-backports main contrib non-free
+            EOF"
+      when: os_type == 'debian' and os_version != '' and os_version is version('11', '<=')
+      register: debian_old_mirror
+
+    - name: Config Debian mirror (new version >= 12, DEB822 format)
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: |
+            sh -c "cat > /etc/apt/sources.list.d/debian.sources << EOF
+            Types: deb
+            URIs: http://varnish.fengqi.io/debian
+            Suites: $(. /etc/os-release && echo $VERSION_CODENAME) $(. /etc/os-release && echo $VERSION_CODENAME)-updates $(. /etc/os-release && echo $VERSION_CODENAME)-backports
+            Components: main contrib non-free non-free-firmware
+            Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg
+            EOF
+            cat >> /etc/apt/sources.list.d/debian.sources << EOF
+
+            Types: deb
+            URIs: http://varnish.fengqi.io/debian-security
+            Suites: $(. /etc/os-release && echo $VERSION_CODENAME)-security
+            Components: main contrib non-free non-free-firmware
+            Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg
+            EOF
+            rm -f /etc/apt/sources.list"
+      when: os_type == 'debian' and os_version != '' and os_version is version('12', '>=')
+      register: debian_new_mirror
+
+    - name: Config Ubuntu mirror (old version <= 22.04)
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: |
+            sh -c "cat > /etc/apt/sources.list << EOF
+            deb http://varnish.fengqi.io/ubuntu $(. /etc/os-release && echo $VERSION_CODENAME) main restricted universe multiverse
+            deb http://varnish.fengqi.io/ubuntu $(. /etc/os-release && echo $VERSION_CODENAME)-updates main restricted universe multiverse
+            deb http://varnish.fengqi.io/ubuntu $(. /etc/os-release && echo $VERSION_CODENAME)-backports main restricted universe multiverse
+            deb http://varnish.fengqi.io/ubuntu $(. /etc/os-release && echo $VERSION_CODENAME)-security main restricted universe multiverse
+            EOF"
+      when: os_type == 'ubuntu' and os_version != '' and os_version is version('22.04', '<=')
+      register: ubuntu_old_mirror
+
+    - name: Config Ubuntu mirror (new version >= 24.04)
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: |
+            sh -c "cat > /etc/apt/sources.list.d/ubuntu.sources << EOF
+            Types: deb deb-src
+            URIs: http://varnish.fengqi.io/ubuntu
+            Suites: $(. /etc/os-release && echo $VERSION_CODENAME) $(. /etc/os-release && echo $VERSION_CODENAME)-updates $(. /etc/os-release && echo $VERSION_CODENAME)-backports
+            Components: main restricted universe multiverse
+            Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg
+            EOF
+            cat > /etc/apt/sources.list.d/ubuntu-security.sources << EOF
+            Types: deb deb-src
+            URIs: http://varnish.fengqi.io/ubuntu
+            Suites: $(. /etc/os-release && echo $VERSION_CODENAME)-security
+            Components: main restricted universe multiverse
+            Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg
+            EOF
+            rm -f /etc/apt/sources.list"
+      when: os_type == 'ubuntu' and os_version != '' and os_version is version('24.04', '>=')
+      register: ubuntu_new_mirror
+
+    - name: Remove Ubuntu cloud-init and openssh packages
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "apt-get purge -y cloud-init openssh-server openssh-client openssh-sftp-server postfix && apt-get autoremove -y && apt-get purge -y $(dpkg -l | grep '^rc' | awk '{print $2}') 2>/dev/null || true"
+      when: os_type == 'ubuntu'
+
+    - name: Remove Debian openssh packages
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "apt-get purge -y openssh-server openssh-client openssh-sftp-server postfix && apt-get autoremove -y && apt-get purge -y $(dpkg -l | grep '^rc' | awk '{print $2}') 2>/dev/null || true"
+      when: os_type == 'debian'
+
+    - name: Apt update
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "apt-get update"
+      when: os_type == 'ubuntu' or os_type == 'debian'
+
+    - name: Apk update
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "apk update"
+      when: os_type == 'alpine'
