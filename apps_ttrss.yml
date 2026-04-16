@@ -86,13 +86,15 @@
         host: "{{ inventory_hostname }}"
         extra_args: "chown -R nobody:nobody /data/www/tt-rss"
 
-    - name: Create Update Daemon
+    - name: Chown init.d
       pct:
         cmd: "push"
         host: "{{ inventory_hostname }}"
         src: "./apps/ttrss/init.d.sh"
         dest: "/etc/init.d/ttrss"
         extra_args: "--perms 0755"
+
+    - name: Add ttrss to default runlevel
       pct:
         cmd: "exec"
         host: "{{ inventory_hostname }}"
