@@ -46,3 +46,8 @@ STATUS=running ansible-playbook -i pve shutdown.yml --limit vm
 STATUS=runn ansible-playbook -i pve on-remote.yml -e 'file=clear-log.sh' --limit vm
 STATUS=runn ansible-playbook -i pve on-remote.yml -e 'file=clear-log.sh' --limit lxc
 ```
+
+5. 升级alpine系统，可以多执行几次，每次只升级一个版本
+```bash
+STATUS=runn ansible-playbook -i pve on-remote.yml -e 'file=alpine_upgrade.sh' --limit lxc
+```
