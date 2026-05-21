@@ -4,7 +4,7 @@
   connection: local
   ignore_errors: no
   vars:
-    grafana_version: "12.0.3"
+    grafana_version: "13.0.1"
   tasks:
     - name: Read current version
       pct:
@@ -63,7 +63,13 @@
       pct:
         cmd: "exec"
         host: "{{ inventory_hostname }}"
-        extra_args: "mv -f /tmp/grafana-v{{ grafana_version }} /opt/grafana"
+        extra_args: "mv -f /tmp/grafana-{{ grafana_version }} /opt/grafana"
+
+    - name: Delete empty data dir
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "rm -rf /opt/grafana/data"
 
     - name: Restore data
       pct:
@@ -98,6 +104,12 @@
         cmd: "exec"
         host: "{{ inventory_hostname }}"
         extra_args: "echo {{ grafana_version }} > /opt/grafana/version"
+
+    - name: Fix own
+      pct:
+        cmd: "exec"
+        host: "{{ inventory_hostname }}"
+        extra_args: "chown -R root:root /opt/grafana"
 
     - name: Clean up
       pct:
